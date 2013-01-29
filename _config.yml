@@ -1,0 +1,4 @@
+# Jekyll
+exclude: nbproject, README.md
+permalink: /:title/
+url: http://localhost/example/
