@@ -65,7 +65,7 @@ $(document).ready(function() {
         }        
         
         for (var jobCollectionIndex = 0; jobCollectionIndex < jobCollectionLength; jobCollectionIndex++) {
-            var job = jobCollection[jobCollectionIndex];
+            var job = jobCollection[jobCollectionIndex];            
             var jobQueueName = job.queue.replace('builds.', '');
             
             if (!isQueueNameIgnored(jobQueueName)) {
