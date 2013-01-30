@@ -77,23 +77,20 @@ $(document).ready(function() {
         callback();
     }
     
-    var presentQueues = function (queues, callback) {
-        $('#placeholder').animate({
-            'opacity':0
-        }, function () {
-            $('#placeholder').slideUp(function () {
-                $('#queues').animate({
-                    'opacity':1
-                }, function () {
-                    $('body').css({
-                        'height':'auto'
-                    });
-                });
-            });
-        });
+    var renderQueues = function (queues, callback) {        
+        var addQueueGroup = function (queueGroup) {
+            if (queueGroup.length > 0) {
+                var queueGroupName = queueGroup.join('-');
+                queueGroups[queueGroupName] = queueGroup;
+                
+                //console.log(queueGroup, queueGroupName);
+            }
+            
+            
+        };
         
         var columnCount = 3;
-        var queueGroups = [];
+        var queueGroups = {};
         var queueIndex = 0;
         
         var currentQueueGroup = [];
@@ -103,49 +100,53 @@ $(document).ready(function() {
                 currentQueueGroup.push(queueName);
                 
                 if (queueIndex % columnCount === (columnCount - 1)) {
-                    queueGroups.push(currentQueueGroup);
+                    addQueueGroup(currentQueueGroup);
                     currentQueueGroup = [];
                 }                
                 
                 queueIndex++;
             }
-        }                
-        
-        queueGroups.push(currentQueueGroup);
-        
-        for (var queueGroupIndex = 0; queueGroupIndex < queueGroups.length; queueGroupIndex++) {
-            var row = $('<div class="row-fluid queue-group" />');
-            
-            for (queueIndex = 0; queueIndex < queueGroups[queueGroupIndex].length; queueIndex++) {
-                var queueName = queueGroups[queueGroupIndex][queueIndex];
-                var queueLength = queues[queueName].length;
-                var queueContent = $('<div class="span4 well queue" />');                
-                queueContent.append($('<h2>'+getQueueLabel(queueName)+' ('+(queueLength)+')</h2>'));
-                
-                var jobListMaxiumumLimit = 10;
-                var jobListLimit = Math.min(queueLength, jobListMaxiumumLimit);
-                
-                var jobList = $('<ul class="job-list" />');
-                
-                for (var jobIndex = 0; jobIndex < jobListLimit; jobIndex++) {                    
-                    var job_id = queues[queueName][jobIndex].id;
-                    
-                    jobList.append($('<li id="job-'+(job_id)+'" class="job"></li>'));
-                    presentRepoInJobList(queues[queueName][jobIndex], queues[queueName][jobIndex].repository_id);
-                }
-                
-                queueContent.append(jobList);                
-                row.append(queueContent);
-            }
-            
-            
-            $('#queues').append(row);
         }
         
-        callback();
+        addQueueGroup(currentQueueGroup);
+
+        for (var queueGroupName in queueGroups) {
+            if (queueGroups.hasOwnProperty(queueGroupName)) {
+                var row = $('<div class="row-fluid queue-group" id="queue-group-'+queueGroupName+'" />');
+
+                for (queueIndex = 0; queueIndex < queueGroups[queueGroupName].length; queueIndex++) {
+                    var queueName = queueGroups[queueGroupName][queueIndex];
+                    var queueLength = queues[queueName].length;
+                    var queueContent = $('<div class="span4 well queue" id="queue-'+queueName+'" />');                
+                    queueContent.append($('<h2>'+getQueueLabel(queueName)+' ('+(queueLength)+')</h2>'));
+
+                    var jobListMaxiumumLimit = 10;
+                    var jobListLimit = Math.min(queueLength, jobListMaxiumumLimit);
+
+                    var jobList = $('<ul class="job-list" />');
+
+                    for (var jobIndex = 0; jobIndex < jobListLimit; jobIndex++) {                    
+                        var job_id = queues[queueName][jobIndex].id;
+
+                        jobList.append($('<li id="job-'+(job_id)+'" class="job">job</li>'));
+                        presentRepoInJobList(queues[queueName][jobIndex]);
+                    }
+
+                    queueContent.append(jobList);                
+                    row.append(queueContent);
+                }
+
+                $('#queues').append(row);                
+            }
+        }
     };
     
-    var presentRepoInJobList = function (job, repository_id) {
+    
+    var updateQueues = function () {
+        console.log('update queues');
+    };
+    
+    var presentRepoInJobList = function (job) {
         jQuery.ajax({
             complete:function (request, textStatus) {
                 //console.log('complete', request, textStatus);
@@ -163,24 +164,44 @@ $(document).ready(function() {
                 }
             },
             success: function (data, textStatus, request) {
-                var content = $('<span class="content"><a class="github-link" href="https://github.com/'+data.slug+'">'+data.slug+'</a> <a class="travis-ci-link" href="https://travis-ci.org/'+data.slug+'/jobs/'+job.id+'">#'+job.number+'</a></span>');
+                var repo = (data.hasOwnProperty('repo')) ? data.repo : data;
+                
+                var content = $('<span class="content"><a class="github-link" href="https://github.com/'+repo.slug+'">'+repo.slug+'</a> <a class="travis-ci-link" href="https://travis-ci.org/'+repo.slug+'/jobs/'+job.id+'">#'+job.number+'</a></span>');
                 
                 $('#job-'+job.id).html(content);
             },
-            url:'https://api.travis-ci.org/repos/' + repository_id
+            url:'https://api.travis-ci.org/repos/' + job.repository_id
         });        
     };
     
     var updateQueues = function () {
-        console.log('update ...');
+        getJobs(function () {
+            buildQueues(jobCollection, function () {
+                //updateQueues(queues);
+            });            
+        });
     };
     
     getJobs(function () {
         buildQueues(jobCollection, function () {
-            presentQueues(queues, function () {
-//                window.setInterval(function () {
-//                    updateQueues();
-//                }, 3000);
+            $('#placeholder').animate({
+                'opacity':0
+            }, function () {
+                $('#placeholder').slideUp(function () {
+                    $('#queues').animate({
+                        'opacity':1
+                    }, function () {
+                        $('body').css({
+                            'height':'auto'
+                        });
+                    });
+                });
+            });            
+            
+            renderQueues(queues, function () {
+                window.setTimeout(function () {
+                    updateQueues();
+                }, 3000);
             });
         });
     });   
