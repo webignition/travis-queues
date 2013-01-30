@@ -1,4 +1,5 @@
 # Jekyll
+title: Travis Queues
 exclude: nbproject, README.md
 permalink: /:title/
 url: http://localhost/example/
