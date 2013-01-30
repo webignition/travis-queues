@@ -28,7 +28,7 @@ $(document).ready(function() {
     };
     
     var jobCollection = [];
-    var queues = [];
+    var queues = [];    
     
     var getJobs = function (callback) {
         jQuery.ajax({
@@ -77,16 +77,12 @@ $(document).ready(function() {
         callback();
     }
     
-    var renderQueues = function (queues, callback) {        
+    var renderQueues = function (queues, callback) {                
         var addQueueGroup = function (queueGroup) {
             if (queueGroup.length > 0) {
                 var queueGroupName = queueGroup.join('-');
                 queueGroups[queueGroupName] = queueGroup;
-                
-                //console.log(queueGroup, queueGroupName);
-            }
-            
-            
+            }            
         };
         
         var columnCount = 3;
@@ -112,38 +108,98 @@ $(document).ready(function() {
 
         for (var queueGroupName in queueGroups) {
             if (queueGroups.hasOwnProperty(queueGroupName)) {
-                var row = $('<div class="row-fluid queue-group" id="queue-group-'+queueGroupName+'" />');
+                var queueGroupId = 'queue-group-'+queueGroupName;
+                var queueGroupElement = $('#'+queueGroupId);
+                
+                if (queueGroupElement.length === 0) {
+                    $('#queues').append('<div class="row-fluid queue-group" id="'+queueGroupId+'" />');
+                }
+                
+                queueGroupElement = $('#'+queueGroupId);
 
                 for (queueIndex = 0; queueIndex < queueGroups[queueGroupName].length; queueIndex++) {
                     var queueName = queueGroups[queueGroupName][queueIndex];
                     var queueLength = queues[queueName].length;
-                    var queueContent = $('<div class="span4 well queue" id="queue-'+queueName+'" />');                
-                    queueContent.append($('<h2>'+getQueueLabel(queueName)+' ('+(queueLength)+')</h2>'));
+                    var queueId = 'queue-'+queueName;
+                    
+                    var queueElement = $('#'+queueId);
+                    if (queueElement.length === 0) {
+                        queueGroupElement.append('<div class="span4 well queue" id="'+queueId+'" />');
+                    }
+                    
+                    queueElement = $('#'+queueId);
+                    
+                    if ($('h2', queueElement).length === 0) {
+                        queueElement.append('<h2>'+getQueueLabel(queueName)+' (<span id="'+queueId+'-length">'+(queueLength)+'</span>)</h2>');
+                    } else {
+                        var queueLengthElement = $('#'+queueId+'-length');                        
+                        var currentQueueLength = queueLengthElement.text();
+                        
+                        if (currentQueueLength != queueLength) {                           
+                            queueLengthElement.text(queueLength);
+                        }
+                    }
 
                     var jobListMaxiumumLimit = 10;
                     var jobListLimit = Math.min(queueLength, jobListMaxiumumLimit);
-
-                    var jobList = $('<ul class="job-list" />');
-
-                    for (var jobIndex = 0; jobIndex < jobListLimit; jobIndex++) {                    
-                        var job_id = queues[queueName][jobIndex].id;
-
-                        jobList.append($('<li id="job-'+(job_id)+'" class="job">job</li>'));
-                        presentRepoInJobList(queues[queueName][jobIndex]);
+                    
+                    var jobListId = 'job-list-'+queueName;
+                    var jobListElement = $('#'+jobListId);
+                
+                    if (jobListElement.length === 0) {
+                        queueElement.append('<ul class="job-list" id="'+jobListId+'" />');
                     }
-
-                    queueContent.append(jobList);                
-                    row.append(queueContent);
-                }
-
-                $('#queues').append(row);                
+                    
+                    jobListElement = $('#'+jobListId);
+                    
+                    var queueContainsJobById = function (jobId) {                        
+                        for (var jobIndex = 0; jobIndex < queueLength; jobIndex++) {                    
+                            if (queues[queueName][jobIndex].id == jobId) {
+                                return true;
+                            }
+                        }  
+                        
+                        return false;
+                    }
+                    
+                    $('.job', jobListElement).each(function () {                      
+                        var jobElement = $(this);
+                        var jobId = jobElement.attr('id').replace('job-', '');
+                        
+                        if (!queueContainsJobById(jobId)) {                            
+                            jobElement.animate({
+                                'opacity':0
+                            }, function () {
+                                jobElement.remove();
+                            });                            
+                        }
+                    });
+                    
+                    for (var jobIndex = 0; jobIndex < jobListLimit; jobIndex++) {                    
+                        var jobId = 'job-'+queues[queueName][jobIndex].id;
+                        
+                        var jobElement = $('#'+jobId);
+                        if (jobElement.length === 0) {
+                            if ($('.job', jobListElement).length < jobListMaxiumumLimit) {
+                                jobElement = $('<li id="'+jobId+'" class="job">'+jobId+'</li>');
+                                jobElement.css({
+                                    'opacity':0
+                                });                                
+;
+                                jobListElement.append(jobElement);
+                                jobElement.animate({
+                                    'opacity':1
+                                });
+                            }
+                            
+                            presentRepoInJobList(queues[queueName][jobIndex]);
+                        }                        
+                    }
+                }                
             }
         }
-    };
-    
-    
-    var updateQueues = function () {
-        console.log('update queues');
+        
+        callback();
     };
     
     var presentRepoInJobList = function (job) {
@@ -177,7 +233,11 @@ $(document).ready(function() {
     var updateQueues = function () {
         getJobs(function () {
             buildQueues(jobCollection, function () {
-                //updateQueues(queues);
+                renderQueues(queues, function () {                    
+                    window.setTimeout(function () {
+                        updateQueues();
+                    }, 1000);                    
+                });
             });            
         });
     };
@@ -201,7 +261,7 @@ $(document).ready(function() {
             renderQueues(queues, function () {
                 window.setTimeout(function () {
                     updateQueues();
-                }, 3000);
+                }, 1000);
             });
         });
     });   
