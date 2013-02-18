@@ -68,7 +68,11 @@ $(document).ready(function() {
             var job = jobCollection[jobCollectionIndex];            
             var jobQueueName = job.queue.replace('builds.', '');
             
-            if (!isQueueNameIgnored(jobQueueName)) {
+            if (queues[jobQueueName] === undefined) {
+                queues[jobQueueName] = [];
+            }            
+            
+            if (!isQueueNameIgnored(jobQueueName) && !(queues[jobQueueName] === undefined)) {
                 queues[jobQueueName].push(job);                
             }
         }       
